@@ -1933,6 +1933,11 @@ function Checkout() {
     const [position, setPosition] = useState<[number, number] | null>(null)
     const [locationError, setLocationError] = useState("")
 
+    const [discountPercentage, setDiscountPercentage]= useState(0)
+    const [discountChecked, setDiscountChecked]= useState(false)
+    const [discountLoading , setDiscountLoading] = useState(false)
+    const [discountError,setDiscountError]= useState("")
+
     useEffect(() => {
         if (userData) {
             setAddress({
@@ -1944,6 +1949,72 @@ function Checkout() {
             })
         }
     }, [userData])
+
+    // area discount 
+
+    // const checkoutDiscount = async (pincode:string)=>{
+    //     try{
+    //         const response = await axios.get("/api/discount",{
+    //             params:{pincode}
+    //         });
+
+    //         return response.data.discountPercentage;
+    //     }catch(err){
+    //         console.log("unable to check area discount",err);
+            
+    //     }
+    // }
+
+    const handleCheckDiscount = async ()=>{
+       const pincode = address.pincode.trim()
+
+       if(!pincode){
+        setDiscountError("Please enter valid pin code")
+        setDiscountPercentage(0)
+        setDiscountChecked(true)
+        return
+       }
+
+      setDiscountLoading(true)
+      setDiscountError("")
+      setDiscountChecked (false)
+
+      try{
+
+        const response = await axios.get('/api/discount',{
+            params:{pincode}
+
+        })
+
+        const discount = Number (response.data.discountPercentage)
+
+        if(
+            response.data.pincode !== pincode || !Number.isFinite(discount) || discount <0 || discount>100
+        ){
+            throw new Error ("Invalid Discount Response")
+        }
+
+        setDiscountPercentage(discount)
+        setDiscountChecked(true)
+
+        if(discount === 0){
+            setDiscountError("No area discount is available for this pin code ")
+        }
+
+      }catch(err){
+        console.error("Discount check failed ", err)
+        setDiscountPercentage(0)
+        setDiscountError("Unable to check the discount, please try again")
+
+      }
+
+    }
+
+    // const discountAmount = discountChecked ? (subTotal*discountPercentage)/100
+
+    // const payTotal = finalTotal-discountAmout
+
+    
 
     const requestLocation = () => {
         setLocationError("")
@@ -2231,6 +2302,8 @@ function Checkout() {
                             </div>
                         </div>
 
+
+
                         <div className="flex gap-2 mt-3">
                             <input
                                 type="text"
@@ -2276,6 +2349,63 @@ function Checkout() {
                     </div>
                 </motion.div>
 
+                <motion.div 
+                initial={{opacity:0,y:10}}
+                animate={{opacity:1, y:0}}
+                className="mt-6 rounded-2xl border border-green-200 bg-gradient-to-br from-green-500 to-white p-5"
+                >
+                    <div className="flex items-start gap-3 ">
+                        <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-100'>
+                            
+                         </div>
+
+                         <div> 
+                            <h3 className='font-bold text-gray-800'> Area-based Discount </h3>
+                            <p className='mt-1 text-sm text-gray-600'> Check if Your delivery have special offer?? </p>
+                         </div>
+                        
+                     </div>
+
+                     <div className='mt-4 flex flex-col gap-3 '>
+                        <input type="text" inputMode="numeric" value={address.pincode} onChange={(e)=>{
+                            const pincode = e.target.value.replace("").slice(0,6)
+
+                            setAddress (prev => ({
+                                ...prev,pincode
+                            }))
+
+                            setDiscountPercentage(0)
+                            setDiscountChecked(false)
+                            setDiscountError("")
+                        }} 
+                        placeholder= "enter 6 digit pin code"
+                        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+
+                        
+                        
+                        />
+                        <button type="button" onClick={handleCheckDiscount} disabled = {discountLoading} 
+                        className='shrink-0 rounded-xl bg-green-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60'
+                         > (discountLoading? "Checking.." : "Check Offer) </button>
+                     </div>
+
+                     {discountError &&(
+                        <p className="mt-3 text-sm text-red-600"> {discountError} </p>
+                     )}
+
+                     {discountChecked && discountPercentage >{} && (
+                        <div className="mt-r flex items-center gap-3 rounded-xl border-green-200 bg-green-100 p-4 ">
+                            <div>
+                                <p className="font-bold text-green-800"> {discountPercentage} % discount unlocked! </p>
+
+                                <p className="text-sm text-green-700">Your are eligible for the offer </p>
+                            </div>    
+                        </div>
+                     )}
+
+
+                </motion.div>
+
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -2312,6 +2442,20 @@ function Checkout() {
                             <span>Final Total : </span>
                             <span className='font-semibold text-black'>{finalTotal}</span>
                         </div>
+
+                        {/* {discountChecked && discountPercentage > 0 && (
+                            <div className="flex justify-between text-sm font-medium text-green-700 ">
+
+                                <span> Area discount ((discountPercentage)%) </span>
+                                <span> ₹(discountAmount.to.Fixed(2)) </span>
+                            </div>
+                        )}
+
+                        <div className= "mt-3 flex-justify_between border-t pt-3 font-bold text-gray-900">
+                            <span>Total Payment </span>
+                            <span> ₹ (payTotal.to.fixed(2)) </span>
+                        
+                        </div> */}
                     </div>
 
                     <motion.button whileTap={{ scale: 0.93 }} className='w-full mt-6 bg-gray-600 text-white py-3 rounded-full hover:bg-green-700 transition-all font-semibold'
