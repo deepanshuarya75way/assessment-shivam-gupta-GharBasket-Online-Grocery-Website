@@ -41,7 +41,6 @@ function CustomTooltip({ active, payload, label }: any) {
   return null
 }
 
-// admin update for the offer 
 
 
 function AdminDashboardClient({ earning, stats, chartData }: propType) {
